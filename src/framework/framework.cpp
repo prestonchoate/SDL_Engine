@@ -1,94 +1,155 @@
 #include "framework.h"
 
+#define TICK_INTERVAL    8
+
+static Uint32 next_time;
+
+Uint32 time_left(void)
+{
+    Uint32 now;
+
+    now = SDL_GetTicks();
+    if(next_time <= now)
+        return 0;
+    else
+        return next_time - now;
+}
+
 Framework::Framework(int height_, int width_): height(height_), width(width_)
 {
     Uint32 windowFlags = SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI;
-    SDL_Init(SDL_INIT_VIDEO); // Initializing SDL as Video
+    SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(width, height, windowFlags, &window, &renderer);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);      // setting draw color
-    SDL_RenderClear(renderer);      // Clear the newly created window
-    SDL_RenderPresent(renderer);    // Reflects the changes done in the
-                                    //  window.
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+    player = createPlayer();
 }
 
 Framework::~Framework()
 {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
 }
 
-void Framework::drawCircle(int center_x, int center_y, int radius_)
+int Framework::run()
 {
-        // Setting the color to be RED with 100% opaque (0% trasparent).
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-
-        // Drawing circle
-        for(int x=center_x-radius_; x<=center_x+radius_; x++){
-            for(int y=center_y-radius_; y<=center_y+radius_; y++){
-                if((std::pow(center_y-y,2)+std::pow(center_x-x,2)) <= 
-                    std::pow(radius_,2)){
-                    SDL_RenderDrawPoint(renderer, x, y);
-                }
-            }
-        }
-
-        // Show the change on the screen
-        SDL_RenderPresent(renderer);
+    next_time = SDL_GetTicks() + TICK_INTERVAL;
+    while (isRunning) {
+        handleEvents();
+        update();
+        render();
+        SDL_Delay(time_left());
+        next_time += TICK_INTERVAL;
+    }
+    return 0;
 }
 
-void Framework::moveCircle()
+void Framework::update()
 {
-        // Setting the color to be RED with 100% opaque (0% trasparent).
-        
-        SDL_Event event;    // Event variable
-        while(!(event.type == SDL_QUIT)){
+    player->update();
+}
 
-            // Circle will go down!
-            for(int i=0; i<height; i++){
-                SDL_Delay(10);  // setting some Delay
-                SDL_PollEvent(&event);  // Catching the poll event.
-                if(event.type == SDL_QUIT) return;
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-                SDL_RenderClear(renderer);
-                drawCircle(width/2, i, 25);
-            }
+void Framework::render()
+{
+    SDL_RenderClear(renderer);
+    player->render(renderer);
+    SDL_RenderPresent(renderer);
+}
 
-            // Circle will go up!
-            for(int i=height; i>0; i--){
-                SDL_Delay(10);  // setting some Delay
-                SDL_PollEvent(&event);  // Catching the poll event.
-                if(event.type == SDL_QUIT) return;
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-                SDL_RenderClear(renderer);
-                drawCircle(width/2, i, 25);
-            }
-        }
-        
+Player* Framework::createPlayer()
+{
+    // Create Surface
+    SDL_Surface *player_sur = IMG_Load("assets/player/1 idle.png");
+    if (player_sur == NULL) {
+        std::cout << "Error loading image: " << IMG_GetError() << "\n";
+        isRunning = false;
+        return NULL;
     }
+    // Create Texture from surface
+    SDL_Texture *player_tex = SDL_CreateTextureFromSurface(renderer, player_sur);
+    if (player_tex == NULL) {
+        std::cout << "Error creating texture " << IMG_GetError() << "\n";
+        isRunning = false;
+        return NULL;
+    }
+    // Release surface
+    SDL_FreeSurface(player_sur);
 
-    int Framework::run()
+    Player *player = new Player(player_tex);
+
+    return player;
+}
+
+void Framework::handleEvents()
+{
+    SDL_Event event;
+    SDL_PollEvent(&event);
+
+    switch (event.type)
     {
-        SDL_Event event;
-        while (!(event.type == SDL_QUIT)) {
-            //TODO: Implement update and render loop
-            SDL_Delay(10);
-            SDL_PollEvent(&event);
-            if (event.type == SDL_QUIT) {
-                return 0;
-            }
-            update();
-            render();
-        }
-        return 0;
-    }
+    case SDL_QUIT:
+        isRunning = false;
+        break;
 
-    void Framework::update()
+    case SDL_KEYDOWN:
+        handleKeyDownEvent(event);
+        break;
+
+    case SDL_KEYUP:
+        handleKeyUpEvent(event);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void Framework::handleKeyDownEvent(SDL_Event event)
+{
+    switch (event.key.keysym.sym)
     {
+        case SDLK_LEFT: case SDLK_a:
+            player->setXVel(-1);
+            break;
+
+        case SDLK_RIGHT: case SDLK_d:
+            player->setXVel(1);
+            break;
+
+        case SDLK_UP: case SDLK_w:
+            player->setYVel(-1);
+            break;
+
+        case SDLK_DOWN: case SDLK_s:
+            player->setYVel(1);
+            break;
         
+        default:
+            break;
     }
+}
 
-    void Framework::render()
+void Framework::handleKeyUpEvent(SDL_Event event)
+{
+    switch (event.key.keysym.sym)
     {
-
+        case SDLK_LEFT: case SDLK_a:
+            player->setXVel(0);
+            break;
+        case SDLK_RIGHT: case SDLK_d:
+            player->setXVel(0);
+            break;
+        case SDLK_UP: case SDLK_w:
+            player->setYVel(0);
+            break;
+        case SDLK_DOWN: case SDLK_s:
+            player->setYVel(0);
+            break;
+        
+        default:
+            break;
     }
+}
