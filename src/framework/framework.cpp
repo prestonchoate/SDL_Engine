@@ -20,7 +20,7 @@ Framework::Framework(int height_, int width_): height(height_), width(width_)
     Uint32 windowFlags = SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI;
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(width, height, windowFlags, &window, &renderer);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_SetRenderDrawColor(renderer, 64, 255, 64, 0);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
     player = createPlayer();
