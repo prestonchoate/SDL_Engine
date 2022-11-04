@@ -13,8 +13,9 @@ private:
     SDL_Window *window = NULL;      // Pointer for the window
     bool isRunning = true;
     Player *player = NULL;
+    SDL_Texture *background = NULL;
     Player *createPlayer();
-    void createBackground();
+    SDL_Texture *createBackground();
     void handleEvents();
     void handleKeyDownEvent(SDL_Event event);
     void handleKeyUpEvent(SDL_Event event);

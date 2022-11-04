@@ -1,5 +1,8 @@
 #include "framework.h"
 
+
+// I got this example from http://www.libsdl.org/release/SDL-1.2.15/docs/html/guidetimeexamples.html
+// But I'm not sure it's an optimal solution. It works for now though
 #define TICK_INTERVAL    8
 
 static Uint32 next_time;
@@ -20,10 +23,11 @@ Framework::Framework(int height_, int width_): height(height_), width(width_)
     Uint32 windowFlags = SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI;
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(width, height, windowFlags, &window, &renderer);
-    SDL_SetRenderDrawColor(renderer, 64, 255, 64, 0);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
     player = createPlayer();
+    background = createBackground();
 }
 
 Framework::~Framework()
@@ -55,6 +59,7 @@ void Framework::update()
 void Framework::render()
 {
     SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, background, NULL, NULL);
     player->render(renderer);
     SDL_RenderPresent(renderer);
 }
@@ -62,7 +67,7 @@ void Framework::render()
 Player* Framework::createPlayer()
 {
     // Create Surface
-    SDL_Surface *player_sur = IMG_Load("assets/player/1 idle.png");
+    SDL_Surface *player_sur = IMG_Load("assets/player/1B.png");
     if (player_sur == NULL) {
         std::cout << "Error loading image: " << IMG_GetError() << "\n";
         isRunning = false;
@@ -80,7 +85,33 @@ Player* Framework::createPlayer()
 
     Player *player = new Player(player_tex);
 
+    // Get current window size and pass them to player
+    player->setMaxXPos(width);
+    player->setMaxYPos(height);
+
     return player;
+}
+
+SDL_Texture* Framework::createBackground()
+{
+    // Create Surface
+    SDL_Surface *bg_sur = IMG_Load("assets/background/bg5.jpg");
+    if (bg_sur == NULL) {
+        std::cout << "Error loading image: " << IMG_GetError() << "\n";
+        isRunning = false;
+        return NULL;
+    }
+    // Create Texture from surface
+    SDL_Texture *bg_tex = SDL_CreateTextureFromSurface(renderer, bg_sur);
+    if (bg_tex == NULL) {
+        std::cout << "Error creating texture " << IMG_GetError() << "\n";
+        isRunning = false;
+        return NULL;
+    }
+    // Release surface
+    SDL_FreeSurface(bg_sur);
+
+    return bg_tex;
 }
 
 void Framework::handleEvents()
